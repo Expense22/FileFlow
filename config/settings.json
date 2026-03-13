@@ -2,16 +2,17 @@
   "project_name": "FileFlow",
   "version": "0.1.0",
   "safety": {
-    "forbidden_folders": ["Windows", "Program Files", "ProgramData"],
-    "critical_files": ["ntoskrnl.exe", "pagefile.sys"]
+    "forbidden_folders": ["Windows", "Program Files", "Program Files (x86)", "ProgramData"],
+    "critical_files": ["ntoskrnl.exe", "pagefile.sys", "hiberfil.sys", "bootmgr"]
   },
   "project_guard": {
     "enabled": true,
-    "signatures": [".blend", ".psd", ".git", ".sln"]
+    "signatures": [".blend", ".blend1", ".psd", ".ai", ".ae", ".sln", ".git", "package.json", ".unity"]
   },
   "cleanup": {
     "enabled": true,
     "quarantine_folder": "_Quarantine",
-    "max_age_days": 1095
+    "max_age_days": 1095,
+    "junk_extensions": [".tmp", ".bak", ".old", ".thumbs.db", ".log"]
   }
 }
