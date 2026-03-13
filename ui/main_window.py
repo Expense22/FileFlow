@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from core.engine import FileFlowEngine
 from core.logger import setup_logger
+import json
 
 logger = setup_logger()
 
@@ -10,33 +11,36 @@ class FileFlowApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("FileFlow v0.1")
-        self.geometry("600x500")
+        self.title("FileFlow v0.2")
+        self.geometry("650x600")
         self.resizable(False, False)
 
         self.selected_path = ""
         self.is_expert_mode = False
         self.dry_run = True
+        self.rule_states = {}
 
         self.create_widgets()
 
     def create_widgets(self):
         """Создает все элементы интерфейса"""
         
+        # Заголовок
         self.title_label = ctk.CTkLabel(
             self, 
-            text="🗂️ FileFlow", 
+            text="🗂️ FileFlow v0.2", 
             font=ctk.CTkFont(size=24, weight="bold")
         )
-        self.title_label.pack(pady=20)
+        self.title_label.pack(pady=15)
 
+        # Выбор папки
         self.path_frame = ctk.CTkFrame(self)
         self.path_frame.pack(pady=10, padx=20, fill="x")
 
         self.path_label = ctk.CTkLabel(
             self.path_frame, 
             text="Папка не выбрана", 
-            width=400,
+            width=450,
             anchor="w"
         )
         self.path_label.pack(side="left", padx=10, pady=10)
@@ -49,13 +53,11 @@ class FileFlowApp(ctk.CTk):
         )
         self.browse_btn.pack(side="right", padx=10, pady=10)
 
+        # Режим работы
         self.mode_frame = ctk.CTkFrame(self)
         self.mode_frame.pack(pady=10, padx=20, fill="x")
 
-        self.mode_label = ctk.CTkLabel(
-            self.mode_frame, 
-            text="Режим работы:"
-        )
+        self.mode_label = ctk.CTkLabel(self.mode_frame, text="Режим работы:")
         self.mode_label.pack(side="left", padx=10)
 
         self.mode_switch = ctk.CTkSwitch(
@@ -68,6 +70,7 @@ class FileFlowApp(ctk.CTk):
         self.mode_switch.select()
         self.mode_switch.pack(side="left", padx=10)
 
+        # Экспертный режим
         self.expert_switch = ctk.CTkSwitch(
             self, 
             text="Экспертный режим", 
@@ -75,6 +78,13 @@ class FileFlowApp(ctk.CTk):
         )
         self.expert_switch.pack(pady=10)
 
+        # Прогресс-бар (скрыт по умолчанию)
+        self.progress_bar = ctk.CTkProgressBar(self, width=550)
+        self.progress_bar.set(0)
+        
+        self.progress_label = ctk.CTkLabel(self, text="")
+
+        # Кнопка запуска
         self.start_btn = ctk.CTkButton(
             self, 
             text="🚀 Запустить сортировку", 
@@ -84,6 +94,7 @@ class FileFlowApp(ctk.CTk):
         )
         self.start_btn.pack(pady=20, padx=20, fill="x")
 
+        # Лог (текстовое поле)
         self.log_text = ctk.CTkTextbox(self, width=550, height=150)
         self.log_text.pack(pady=10, padx=20)
         self.log_text.insert("0.0", "Готов к работе...\n")
@@ -119,13 +130,13 @@ class FileFlowApp(ctk.CTk):
         if not hasattr(self, 'expert_btn'):
             self.expert_btn = ctk.CTkButton(
                 self,
-                text="📄 Просмотр правил (JSON)",
-                command=self.view_rules,
+                text="⚙️ Редактор правил",
+                command=self.edit_rules,
                 fg_color="gray"
             )
             self.settings_btn = ctk.CTkButton(
                 self,
-                text="⚙️ Настройки безопасности",
+                text="📄 Настройки безопасности",
                 command=self.view_settings,
                 fg_color="gray"
             )
@@ -139,25 +150,122 @@ class FileFlowApp(ctk.CTk):
             self.expert_btn.pack_forget()
             self.settings_btn.pack_forget()
 
-    def view_rules(self):
-        """Открывает окно с правилами сортировки"""
-        rules_window = ctk.CTkToplevel(self)
-        rules_window.title("Правила сортировки")
-        rules_window.geometry("500x400")
-        
-        text_box = ctk.CTkTextbox(rules_window, width=480, height=350)
-        text_box.pack(pady=10, padx=10)
-        
-        base_dir = Path(__file__).parent.parent
-        rules_path = base_dir / 'config' / 'rules.json'
-        
-        with open(rules_path, 'r', encoding='utf-8') as f:
-            rules_content = f.read()
-        
-        text_box.insert("0.0", rules_content)
-        text_box.configure(state="disabled")
-        
-        self.log("📄 Правила открыты для просмотра")
+    def edit_rules(self):
+        """Открывает редактор правил с галочками"""
+        try:
+            rules_window = ctk.CTkToplevel(self)
+            rules_window.title("Редактор правил")
+            rules_window.geometry("600x550")
+            rules_window.resizable(False, False)
+
+            # Заголовок
+            title = ctk.CTkLabel(
+                rules_window, 
+                text="📋 Правила сортировки", 
+                font=ctk.CTkFont(size=18, weight="bold")
+            )
+            title.pack(pady=10)
+
+            # Загрузка правил
+            base_dir = Path(__file__).parent.parent
+            rules_path = base_dir / 'config' / 'rules.json'
+            
+            self.log(f"🔍 Путь к правилам: {rules_path}")
+            self.log(f"🔍 Файл существует: {rules_path.exists()}")
+            
+            with open(rules_path, 'r', encoding='utf-8') as f:
+                rules_data = json.load(f)
+
+            self.log(f"📄 Загружено правил: {len(rules_data.get('rules', []))}")
+
+            # Фрейм для правил
+            rules_frame = ctk.CTkFrame(rules_window)
+            rules_frame.pack(pady=10, padx=20, fill="both", expand=True)
+
+            self.rule_checkboxes = {}
+
+            for i, rule in enumerate(rules_data['rules']):
+                frame = ctk.CTkFrame(rules_frame)
+                frame.pack(pady=3, padx=10, fill="x")
+
+                # Галочка включения
+                cb = ctk.CTkCheckBox(
+                    frame, 
+                    text=f"{rule['name']}",
+                    width=200
+                )
+                if rule.get('enabled', True):
+                    cb.select()
+                else:
+                    cb.deselect()
+                cb.pack(side="left", padx=5, pady=5)
+
+                self.rule_checkboxes[rule['id']] = cb
+
+                # Расширения
+                ext_text = ', '.join(rule['extensions'][:4])
+                if len(rule['extensions']) > 4:
+                    ext_text += '...'
+                ext_label = ctk.CTkLabel(
+                    frame, 
+                    text=f"({ext_text})", 
+                    width=250,
+                    font=ctk.CTkFont(size=11)
+                )
+                ext_label.pack(side="left", padx=5, pady=5)
+
+                # Папка назначения
+                dest_label = ctk.CTkLabel(
+                    frame, 
+                    text=f"→ {rule['destination']}", 
+                    width=150,
+                    font=ctk.CTkFont(size=11)
+                )
+                dest_label.pack(side="right", padx=5, pady=5)
+
+            # Кнопка сохранения
+            def save_rules():
+                try:
+                    for rule in rules_data['rules']:
+                        rule_id = rule['id']
+                        if rule_id in self.rule_checkboxes:
+                            rule['enabled'] = self.rule_checkboxes[rule_id].get()
+                    
+                    with open(rules_path, 'w', encoding='utf-8') as f:
+                        json.dump(rules_data, f, indent=2, ensure_ascii=False)
+                    
+                    self.log("✅ Правила сохранены!")
+                    rules_window.destroy()
+                except Exception as e:
+                    self.log(f"❌ Ошибка сохранения: {e}")
+
+            save_btn = ctk.CTkButton(
+                rules_window, 
+                text="💾 Сохранить изменения", 
+                command=save_rules,
+                height=40,
+                width=400
+            )
+            save_btn.pack(pady=15, padx=20)
+
+            # Кнопка отмены
+            cancel_btn = ctk.CTkButton(
+                rules_window, 
+                text="❌ Отмена", 
+                command=rules_window.destroy,
+                height=35,
+                width=400,
+                fg_color="gray"
+            )
+            cancel_btn.pack(pady=5, padx=20)
+
+            self.log("📋 Редактор правил открыт")
+            
+        except Exception as e:
+            self.log(f"❌ Ошибка открытия редактора: {e}")
+            logger.error(f"Ошибка в edit_rules: {e}")
+            import traceback
+            traceback.print_exc()
 
     def view_settings(self):
         """Открывает окно с настройками безопасности"""
@@ -179,11 +287,24 @@ class FileFlowApp(ctk.CTk):
         
         self.log("⚙️ Настройки открыты для просмотра")
 
+    def update_progress(self, current, total):
+        """Обновляет прогресс-бар"""
+        if total > 0:
+            progress = current / total
+            self.progress_bar.set(progress)
+            self.progress_label.configure(text=f"{current}/{total} файлов")
+
     def start_sorting(self):
         """Запускает процесс сортировки"""
         if not self.selected_path:
             self.log("❌ Ошибка: Выберите папку!")
             return
+
+        # Показываем прогресс-бар
+        self.progress_bar.pack(pady=10, padx=20, fill="x")
+        self.progress_label.pack(pady=5)
+        self.progress_bar.set(0)
+        self.progress_label.configure(text="Подготовка...")
 
         self.log(f"\n=== Запуск сортировки ===")
         self.log(f"Путь: {self.selected_path}")
@@ -206,6 +327,10 @@ class FileFlowApp(ctk.CTk):
         except Exception as e:
             self.log(f"❌ Критическая ошибка: {str(e)}")
             logger.error(f"Ошибка в GUI: {e}")
+        finally:
+            # Скрываем прогресс-бар после завершения
+            self.progress_bar.pack_forget()
+            self.progress_label.pack_forget()
 
     def log(self, message):
         """Добавляет сообщение в лог-окно"""

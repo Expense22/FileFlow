@@ -31,3 +31,17 @@
 2026-03-13 23:23:48,140 - INFO - Перемещено: D:/Dev/FileFlow/tests\Photo.jpg -> D:/Dev/FileFlow/tests\Media/Images\Photo.jpg
 2026-03-13 23:23:48,141 - INFO - 
 === Готово. Обработано файлов: 3 ===
+2026-03-13 23:49:34,167 - ERROR - Ошибка в edit_rules: ['anchor'] are not supported arguments. Look at the documentation for supported arguments.
+2026-03-13 23:52:30,099 - ERROR - Ошибка в edit_rules: ['anchor'] are not supported arguments. Look at the documentation for supported arguments.
+2026-03-14 00:02:20,083 - ERROR - Ошибка в edit_rules: ['anchor'] are not supported arguments. Look at the documentation for supported arguments.
+2026-03-14 00:09:55,520 - INFO - === Запуск FileFlow для: D:/Dev/FileFlow/tests ===
+2026-03-14 00:09:55,521 - INFO - ✅ Путь безопасен: D:/Dev/FileFlow/tests
+2026-03-14 00:09:55,534 - INFO - 🛡️ Защищено проектов: 1
+2026-03-14 00:09:55,543 - INFO - 📁 Всего файлов на обработку: 3
+2026-03-14 00:09:55,554 - INFO - 🗑️ Найдено мусора: 0
+2026-03-14 00:09:55,555 - INFO -    [DRY] Документы: Document.docx
+2026-03-14 00:09:55,557 - INFO -    [DRY] Изображения: old_foto.jpg
+2026-03-14 00:09:55,559 - INFO -    [DRY] Изображения: Photo.jpg
+2026-03-14 00:09:55,561 - INFO - 
+=== Готово. Обработано файлов: 3 ===
+2026-03-14 00:09:55,562 - INFO - ⚠️ Режим Dry Run — файлы не были перемещены!
