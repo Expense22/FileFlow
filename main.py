@@ -75,6 +75,34 @@ def main():
             logger.error(f"Проверка пути провалена: {test_path} - {msg}")
     
     print("\n=== Тест завершен ===")
-
+def test_engine():
+    """Тест полноценного движка сортировки"""
+    base_dir = Path(__file__).parent
+    config_path = base_dir / 'config' / 'rules.json'
+    settings_path = base_dir / 'config' / 'settings.json'
+    
+    test_path = input("\nВведите путь для сортировки: ").strip()
+    if not test_path:
+        return
+    
+    mode = input("Режим: 1 - Dry Run (Тест), 2 - Live (Работа): ").strip()
+    dry_run = (mode != '2')
+    
+    if dry_run:
+        print("\n⚠️ ВНИМАНИЕ: Режим тестирования. Файлы не будут перемещены.")
+    else:
+        print("\n❗ ВНИМАНИЕ: Файлы будут перемещены реально!")
+        confirm = input("Продолжить? (да/нет): ").strip().lower()
+        if confirm != 'да':
+            print("Отменено.")
+            return
+    
+    from core.engine import FileFlowEngine
+    engine = FileFlowEngine(config_path, settings_path)
+    engine.run(test_path, dry_run=dry_run)
 if __name__ == "__main__":
-    main()
+    main()  # Старый тест модулей
+    
+    choice = input("\nЗапустить движок сортировки? (да/нет): ").strip().lower()
+    if choice == 'да':
+        test_engine()
