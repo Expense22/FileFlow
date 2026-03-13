@@ -22,26 +22,37 @@ class FileFlowEngine:
         self.guard = ProjectGuard(self.settings['project_guard']['signatures'])
         self.cleanup = None
 
-    def run(self, root_path, dry_run=True):
+    def _log(self, message, gui=None):
+        """
+        Универсальная функция логов: пишет и в консоль, и в GUI (если есть)
+        """
+        print(message)  # В консоль
+        if gui:
+            gui.log(message)  # В окно программы
+        logger.info(message)  # В файл логов
+
+    def run(self, root_path, dry_run=True, gui=None):
         """
         Главный метод сортировки.
         dry_run=True — тестовый режим (без реального перемещения)
+        gui — объект окна GUI для логирования (опционально)
         """
-        logger.info(f"=== Запуск FileFlow для: {root_path} ===")
+        self._log(f"=== Запуск FileFlow для: {root_path} ===", gui)
         
         # 1. Проверка безопасности
         safe, msg = validate_root_path(root_path)
         if not safe:
-            logger.error(f"БЕЗОПАСНОСТЬ: {msg}")
-            print(f"❌ {msg}")
+            error_msg = f"БЕЗОПАСНОСТЬ: {msg}"
+            self._log(error_msg, gui)
+            logger.error(error_msg)
             return False
         
-        print(f"✅ Путь безопасен: {root_path}")
+        self._log(f"✅ Путь безопасен: {root_path}", gui)
         
         # 2. Сканирование проектов
         if self.settings['project_guard']['enabled']:
             self.guard.scan(root_path)
-            print(f"🛡️ Защищено проектов: {len(self.guard.protected_roots)}")
+            self._log(f"🛡️ Защищено проектов: {len(self.guard.protected_roots)}", gui)
 
         # 3. Инициализация очистки
         if self.settings['cleanup']['enabled']:
@@ -64,18 +75,18 @@ class FileFlowEngine:
                 
                 all_files.append(filepath)
 
-        print(f"📁 Всего файлов на обработку: {len(all_files)}")
+        self._log(f"📁 Всего файлов на обработку: {len(all_files)}", gui)
 
         # 5. Очистка (Карантин)
         if self.cleanup:
             junk_list = self.cleanup.find_junk(all_files)
-            print(f"🗑️ Найдено мусора: {len(junk_list)}")
+            self._log(f"🗑️ Найдено мусора: {len(junk_list)}", gui)
             
             for f, reason in junk_list:
                 if not dry_run:
                     self.cleanup.move_to_quarantine(f, reason)
                 else:
-                    print(f"   [DRY] В карантин: {os.path.basename(f)}")
+                    self._log(f"   [DRY] В карантин: {os.path.basename(f)}", gui)
                 # Удаляем из списка обработки
                 if f in all_files:
                     all_files.remove(f)
@@ -107,13 +118,15 @@ class FileFlowEngine:
                         moved_count += 1
                         logger.info(f"Перемещено: {filepath} -> {new_path}")
                     except Exception as e:
-                        logger.error(f"Ошибка перемещения {filepath}: {e}")
+                        error_msg = f"Ошибка перемещения {filepath}: {e}"
+                        self._log(f"❌ {error_msg}", gui)
+                        logger.error(error_msg)
                 else:
-                    print(f"   [DRY] Переместить: {os.path.basename(filepath)} -> {rule['destination']}")
+                    self._log(f"   [DRY] Переместить: {os.path.basename(filepath)} -> {rule['destination']}", gui)
                     moved_count += 1
 
-        print(f"\n=== Готово. Обработано файлов: {moved_count} ===")
+        self._log(f"\n=== Готово. Обработано файлов: {moved_count} ===", gui)
         if dry_run:
-            print("⚠️ Режим Dry Run — файлы не были перемещены!")
+            self._log("⚠️ Режим Dry Run — файлы не были перемещены!", gui)
         
         return True
