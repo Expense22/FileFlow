@@ -3,12 +3,13 @@ import json
 from pathlib import Path
 from core.logger import setup_logger
 from core.safety import validate_root_path
+from core.exclusions import ProjectGuard  # НОВОЕ: Импорт защиты проектов
 
 def main():
     logger = setup_logger()
     print("=== Запуск FileFlow v0.1 ===")
     
-    # Проверка конфигов
+    # Загрузка настроек
     base_dir = Path(__file__).parent
     settings_path = base_dir / 'config' / 'settings.json'
     
@@ -20,7 +21,7 @@ def main():
         settings = json.load(f)
         print(f"📛 Проект: {settings.get('project_name')}")
 
-    # Тест безопасности
+    # Тест безопасности (Системные файлы)
     test_path = input("\nВведите путь для проверки (или Enter для пропуска): ").strip()
     
     if test_path:
@@ -28,6 +29,15 @@ def main():
         if safe:
             print(f"✅ {msg}")
             logger.info(f"Проверка пути успешна: {test_path}")
+            
+            # НОВОЕ: Тест защиты проектов
+            if settings['project_guard']['enabled']:
+                signatures = settings['project_guard']['signatures']
+                guard = ProjectGuard(signatures)
+                guard.scan(test_path)
+                print(f"🛡️ Найдено защищенных проектов: {len(guard.protected_roots)}")
+                if guard.protected_roots:
+                    print("Защищенные папки:", guard.protected_roots)
         else:
             print(f"❌ {msg}")
             logger.error(f"Проверка пути провалена: {test_path} - {msg}")
