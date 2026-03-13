@@ -1,0 +1,14 @@
+{
+  "rules": [
+    {
+      "id": "images",
+      "extensions": [".jpg", ".png", ".jpeg"],
+      "destination": "Media/Images"
+    },
+    {
+      "id": "docs",
+      "extensions": [".doc", ".docx", ".pdf", ".txt"],
+      "destination": "Documents"
+    }
+  ]
+}

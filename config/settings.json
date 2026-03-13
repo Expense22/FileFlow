@@ -1,0 +1,17 @@
+{
+  "project_name": "FileFlow",
+  "version": "0.1.0",
+  "safety": {
+    "forbidden_folders": ["Windows", "Program Files", "ProgramData"],
+    "critical_files": ["ntoskrnl.exe", "pagefile.sys"]
+  },
+  "project_guard": {
+    "enabled": true,
+    "signatures": [".blend", ".psd", ".git", ".sln"]
+  },
+  "cleanup": {
+    "enabled": true,
+    "quarantine_folder": "_Quarantine",
+    "max_age_days": 1095
+  }
+}
