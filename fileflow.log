@@ -19,3 +19,15 @@
 2026-03-13 23:19:55,560 - INFO - 
 === Готово. Обработано файлов: 3 ===
 2026-03-13 23:19:55,578 - INFO - ⚠️ Режим Dry Run — файлы не были перемещены!
+2026-03-13 23:23:48,097 - INFO - === Запуск FileFlow для: D:/Dev/FileFlow/tests ===
+2026-03-13 23:23:48,098 - INFO - ✅ Путь безопасен: D:/Dev/FileFlow/tests
+2026-03-13 23:23:48,112 - INFO - 🛡️ Защищено проектов: 1
+2026-03-13 23:23:48,126 - INFO - 📁 Всего файлов на обработку: 5
+2026-03-13 23:23:48,137 - INFO - 🗑️ Найдено мусора: 2
+2026-03-13 23:23:48,138 - INFO - Карантин: backup.bak (junk)
+2026-03-13 23:23:48,138 - INFO - Карантин: temp..tmp (junk)
+2026-03-13 23:23:48,139 - INFO - Перемещено: D:/Dev/FileFlow/tests\Document.docx -> D:/Dev/FileFlow/tests\Documents\Document.docx
+2026-03-13 23:23:48,139 - INFO - Перемещено: D:/Dev/FileFlow/tests\old_foto.jpg -> D:/Dev/FileFlow/tests\Media/Images\old_foto.jpg
+2026-03-13 23:23:48,140 - INFO - Перемещено: D:/Dev/FileFlow/tests\Photo.jpg -> D:/Dev/FileFlow/tests\Media/Images\Photo.jpg
+2026-03-13 23:23:48,141 - INFO - 
+=== Готово. Обработано файлов: 3 ===

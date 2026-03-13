@@ -10,23 +10,19 @@ class FileFlowApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        # Настройки окна
         self.title("FileFlow v0.1")
         self.geometry("600x500")
         self.resizable(False, False)
 
-        # Переменные
         self.selected_path = ""
         self.is_expert_mode = False
         self.dry_run = True
 
-        # Создание интерфейса
         self.create_widgets()
 
     def create_widgets(self):
         """Создает все элементы интерфейса"""
         
-        # Заголовок
         self.title_label = ctk.CTkLabel(
             self, 
             text="🗂️ FileFlow", 
@@ -34,7 +30,6 @@ class FileFlowApp(ctk.CTk):
         )
         self.title_label.pack(pady=20)
 
-        # Выбор папки
         self.path_frame = ctk.CTkFrame(self)
         self.path_frame.pack(pady=10, padx=20, fill="x")
 
@@ -54,7 +49,6 @@ class FileFlowApp(ctk.CTk):
         )
         self.browse_btn.pack(side="right", padx=10, pady=10)
 
-        # Режим работы
         self.mode_frame = ctk.CTkFrame(self)
         self.mode_frame.pack(pady=10, padx=20, fill="x")
 
@@ -71,10 +65,9 @@ class FileFlowApp(ctk.CTk):
             onvalue=True,
             offvalue=False
         )
-        self.mode_switch.select()  # Включено по умолчанию
+        self.mode_switch.select()
         self.mode_switch.pack(side="left", padx=10)
 
-        # Экспертный режим
         self.expert_switch = ctk.CTkSwitch(
             self, 
             text="Экспертный режим", 
@@ -82,7 +75,6 @@ class FileFlowApp(ctk.CTk):
         )
         self.expert_switch.pack(pady=10)
 
-        # Кнопка запуска
         self.start_btn = ctk.CTkButton(
             self, 
             text="🚀 Запустить сортировку", 
@@ -92,7 +84,6 @@ class FileFlowApp(ctk.CTk):
         )
         self.start_btn.pack(pady=20, padx=20, fill="x")
 
-        # Лог (текстовое поле)
         self.log_text = ctk.CTkTextbox(self, width=550, height=150)
         self.log_text.pack(pady=10, padx=20)
         self.log_text.insert("0.0", "Готов к работе...\n")
@@ -118,8 +109,75 @@ class FileFlowApp(ctk.CTk):
         self.is_expert_mode = self.expert_switch.get()
         if self.is_expert_mode:
             self.log("🔧 Экспертный режим включен")
+            self.show_expert_widgets()
         else:
             self.log("📱 Простой режим включен")
+            self.hide_expert_widgets()
+
+    def show_expert_widgets(self):
+        """Показывает виджеты экспертного режима"""
+        if not hasattr(self, 'expert_btn'):
+            self.expert_btn = ctk.CTkButton(
+                self,
+                text="📄 Просмотр правил (JSON)",
+                command=self.view_rules,
+                fg_color="gray"
+            )
+            self.settings_btn = ctk.CTkButton(
+                self,
+                text="⚙️ Настройки безопасности",
+                command=self.view_settings,
+                fg_color="gray"
+            )
+        
+        self.expert_btn.pack(pady=5, padx=20, fill="x", before=self.start_btn)
+        self.settings_btn.pack(pady=5, padx=20, fill="x", before=self.start_btn)
+
+    def hide_expert_widgets(self):
+        """Скрывает виджеты экспертного режима"""
+        if hasattr(self, 'expert_btn'):
+            self.expert_btn.pack_forget()
+            self.settings_btn.pack_forget()
+
+    def view_rules(self):
+        """Открывает окно с правилами сортировки"""
+        rules_window = ctk.CTkToplevel(self)
+        rules_window.title("Правила сортировки")
+        rules_window.geometry("500x400")
+        
+        text_box = ctk.CTkTextbox(rules_window, width=480, height=350)
+        text_box.pack(pady=10, padx=10)
+        
+        base_dir = Path(__file__).parent.parent
+        rules_path = base_dir / 'config' / 'rules.json'
+        
+        with open(rules_path, 'r', encoding='utf-8') as f:
+            rules_content = f.read()
+        
+        text_box.insert("0.0", rules_content)
+        text_box.configure(state="disabled")
+        
+        self.log("📄 Правила открыты для просмотра")
+
+    def view_settings(self):
+        """Открывает окно с настройками безопасности"""
+        settings_window = ctk.CTkToplevel(self)
+        settings_window.title("Настройки безопасности")
+        settings_window.geometry("500x400")
+        
+        text_box = ctk.CTkTextbox(settings_window, width=480, height=350)
+        text_box.pack(pady=10, padx=10)
+        
+        base_dir = Path(__file__).parent.parent
+        settings_path = base_dir / 'config' / 'settings.json'
+        
+        with open(settings_path, 'r', encoding='utf-8') as f:
+            settings_content = f.read()
+        
+        text_box.insert("0.0", settings_content)
+        text_box.configure(state="disabled")
+        
+        self.log("⚙️ Настройки открыты для просмотра")
 
     def start_sorting(self):
         """Запускает процесс сортировки"""
@@ -138,8 +196,6 @@ class FileFlowApp(ctk.CTk):
             settings_path = base_dir / 'config' / 'settings.json'
 
             engine = FileFlowEngine(config_path, settings_path)
-            
-            # Запускаем с передачей self для логирования
             result = engine.run(self.selected_path, dry_run=self.dry_run, gui=self)
 
             self.log("-" * 30)
@@ -154,7 +210,7 @@ class FileFlowApp(ctk.CTk):
     def log(self, message):
         """Добавляет сообщение в лог-окно"""
         self.log_text.insert("end", f"{message}\n")
-        self.log_text.see("end")  # Прокрутка вниз
+        self.log_text.see("end")
 
 def run_app():
     """Запуск приложения"""
