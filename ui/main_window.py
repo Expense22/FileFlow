@@ -155,7 +155,7 @@ class FileFlowApp(ctk.CTk):
         try:
             rules_window = ctk.CTkToplevel(self)
             rules_window.title("Редактор правил")
-            rules_window.geometry("600x550")
+            rules_window.geometry("750x650")
             rules_window.resizable(False, False)
 
             # Заголовок
@@ -166,39 +166,50 @@ class FileFlowApp(ctk.CTk):
             )
             title.pack(pady=10)
 
+            # Подсказка для экспертного режима
+            if self.is_expert_mode:
+                hint = ctk.CTkLabel(
+                    rules_window,
+                    text="💡 Экспертный режим: можно менять папку назначения или отключить сортировку",
+                    font=ctk.CTkFont(size=11),
+                    text_color="gray"
+                )
+                hint.pack(pady=5)
+
             # Загрузка правил
             base_dir = Path(__file__).parent.parent
             rules_path = base_dir / 'config' / 'rules.json'
             
-            self.log(f"🔍 Путь к правилам: {rules_path}")
-            self.log(f"🔍 Файл существует: {rules_path.exists()}")
-            
             with open(rules_path, 'r', encoding='utf-8') as f:
                 rules_data = json.load(f)
 
-            self.log(f"📄 Загружено правил: {len(rules_data.get('rules', []))}")
-
-            # Фрейм для правил
-            rules_frame = ctk.CTkFrame(rules_window)
-            rules_frame.pack(pady=10, padx=20, fill="both", expand=True)
+            # Скроллируемый фрейм для правил
+            scroll_frame = ctk.CTkScrollableFrame(rules_window, width=700, height=450)
+            scroll_frame.pack(pady=10, padx=20, fill="both", expand=True)
 
             self.rule_checkboxes = {}
+            self.rule_destinations = {}
+            self.rule_no_sort = {}
 
             for i, rule in enumerate(rules_data['rules']):
-                frame = ctk.CTkFrame(rules_frame)
-                frame.pack(pady=3, padx=10, fill="x")
+                # Фрейм для одного правила
+                frame = ctk.CTkFrame(scroll_frame)
+                frame.pack(pady=5, padx=10, fill="x")
 
-                # Галочка включения
+                # Строка 1: Название + расширения
+                top_frame = ctk.CTkFrame(frame, fg_color="transparent")
+                top_frame.pack(side="top", fill="x", padx=5, pady=5)
+
                 cb = ctk.CTkCheckBox(
-                    frame, 
+                    top_frame, 
                     text=f"{rule['name']}",
-                    width=200
+                    width=150
                 )
                 if rule.get('enabled', True):
                     cb.select()
                 else:
                     cb.deselect()
-                cb.pack(side="left", padx=5, pady=5)
+                cb.pack(side="left", padx=5)
 
                 self.rule_checkboxes[rule['id']] = cb
 
@@ -207,29 +218,98 @@ class FileFlowApp(ctk.CTk):
                 if len(rule['extensions']) > 4:
                     ext_text += '...'
                 ext_label = ctk.CTkLabel(
-                    frame, 
+                    top_frame, 
                     text=f"({ext_text})", 
+                    width=200,
+                    font=ctk.CTkFont(size=11),
+                    text_color="gray"
+                )
+                ext_label.pack(side="left", padx=10)
+
+                # Строка 2: Папка назначения + кнопки
+                bottom_frame = ctk.CTkFrame(frame, fg_color="transparent")
+                bottom_frame.pack(side="bottom", fill="x", padx=5, pady=5)
+
+                # Галочка "Не сортировать" (только эксперт)
+                if self.is_expert_mode:
+                    no_sort_cb = ctk.CTkCheckBox(
+                        bottom_frame,
+                        text="⛔ Не сортировать",
+                        width=130,
+                        font=ctk.CTkFont(size=11)
+                    )
+                    if not rule.get('destination', ''):
+                        no_sort_cb.select()
+                    no_sort_cb.pack(side="left", padx=5)
+                    self.rule_no_sort[rule['id']] = no_sort_cb
+
+                # Поле ввода папки
+                dest_entry = ctk.CTkEntry(
+                    bottom_frame,
                     width=250,
+                    height=28,
                     font=ctk.CTkFont(size=11)
                 )
-                ext_label.pack(side="left", padx=5, pady=5)
+                dest_entry.insert(0, rule.get('destination', ''))
+                
+                # Отключаем если "Не сортировать"
+                if self.is_expert_mode and 'no_sort_cb' in locals() and no_sort_cb.get():
+                    dest_entry.configure(state="disabled", fg_color="gray")
+                
+                dest_entry.pack(side="left", padx=5)
+                self.rule_destinations[rule['id']] = dest_entry
 
-                # Папка назначения
-                dest_label = ctk.CTkLabel(
-                    frame, 
-                    text=f"→ {rule['destination']}", 
-                    width=150,
-                    font=ctk.CTkFont(size=11)
-                )
-                dest_label.pack(side="right", padx=5, pady=5)
+                # Кнопка "Обзор" (только эксперт)
+                if self.is_expert_mode:
+                    def make_change_btn(entry):
+                        def change_folder():
+                            folder = ctk.filedialog.askdirectory()
+                            if folder:
+                                entry.delete(0, 'end')
+                                entry.insert(0, folder)
+                        return change_folder
+                    
+                    browse_btn = ctk.CTkButton(
+                        bottom_frame,
+                        text="Обзор...",
+                        width=80,
+                        height=28,
+                        command=make_change_btn(dest_entry)
+                    )
+                    browse_btn.pack(side="left", padx=5)
 
-            # Кнопка сохранения
+                # Связь галочки с полем
+                if self.is_expert_mode and 'no_sort_cb' in locals():
+                    def toggle_entry(cb, entry):
+                        def _toggle():
+                            if cb.get():
+                                entry.configure(state="disabled", fg_color="gray")
+                            else:
+                                entry.configure(state="normal")
+                        return _toggle
+                    
+                    no_sort_cb.configure(command=toggle_entry(no_sort_cb, dest_entry))
+
+            # Кнопки сохранения и отмены
+            btn_frame = ctk.CTkFrame(rules_window, fg_color="transparent")
+            btn_frame.pack(pady=15, padx=20, fill="x")
+
             def save_rules():
                 try:
                     for rule in rules_data['rules']:
                         rule_id = rule['id']
+                        
                         if rule_id in self.rule_checkboxes:
                             rule['enabled'] = self.rule_checkboxes[rule_id].get()
+                        
+                        if rule_id in self.rule_destinations:
+                            dest = self.rule_destinations[rule_id].get().strip()
+                            
+                            if rule_id in self.rule_no_sort and self.rule_no_sort[rule_id].get():
+                                rule['destination'] = ""
+                                rule['enabled'] = False
+                            else:
+                                rule['destination'] = dest
                     
                     with open(rules_path, 'w', encoding='utf-8') as f:
                         json.dump(rules_data, f, indent=2, ensure_ascii=False)
@@ -240,24 +320,23 @@ class FileFlowApp(ctk.CTk):
                     self.log(f"❌ Ошибка сохранения: {e}")
 
             save_btn = ctk.CTkButton(
-                rules_window, 
+                btn_frame, 
                 text="💾 Сохранить изменения", 
                 command=save_rules,
                 height=40,
-                width=400
+                width=250
             )
-            save_btn.pack(pady=15, padx=20)
+            save_btn.pack(side="left", padx=20)
 
-            # Кнопка отмены
             cancel_btn = ctk.CTkButton(
-                rules_window, 
+                btn_frame, 
                 text="❌ Отмена", 
                 command=rules_window.destroy,
-                height=35,
-                width=400,
+                height=40,
+                width=150,
                 fg_color="gray"
             )
-            cancel_btn.pack(pady=5, padx=20)
+            cancel_btn.pack(side="right", padx=20)
 
             self.log("📋 Редактор правил открыт")
             

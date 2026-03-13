@@ -10,7 +10,8 @@
         ".jpeg",
         ".gif",
         ".bmp",
-        ".webp"
+        ".webp",
+        ".heic"
       ],
       "destination": "Media/Images"
     },
