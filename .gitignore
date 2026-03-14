@@ -19,7 +19,7 @@ test_*.py
 config/rules.json
 config/settings.json
 
-# Сборка
+# Сборка PyInstaller
 dist/
 build/
 *.spec
@@ -28,5 +28,3 @@ portable.mode
 # IDE
 .vscode/
 .idea/
-…*.swp
-*.swo

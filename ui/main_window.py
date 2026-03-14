@@ -110,10 +110,10 @@ class FileFlowApp(ctk.CTk):
         self.stats_text = ctk.CTkTextbox(
             self.stats_frame, 
             width=600, 
-            height=100,
+            height=120,
             font=ctk.CTkFont(size=11)
         )
-        self.stats_text.pack(pady=5, padx=10, fill="both", expand=True)
+        self.stats_text.pack(pady=5, padx=10, fill="x")
         self.stats_text.insert("0.0", "Выберите папку и нажмите «Анализ»\n")
         self.stats_text.configure(state="disabled")
 
@@ -200,7 +200,7 @@ class FileFlowApp(ctk.CTk):
         self.expert_btn.pack(pady=5, padx=20, fill="x", before=self.start_btn)
         self.settings_btn.pack(pady=5, padx=20, fill="x", before=self.start_btn)
         
-        # Показываем статистику в экспертном режиме
+        # Просто показываем панель статистики (кнопка уже создана в create_widgets)
         self.stats_frame.pack(pady=10, padx=20, fill="x")
 
     def hide_expert_widgets(self):
@@ -209,6 +209,7 @@ class FileFlowApp(ctk.CTk):
             self.expert_btn.pack_forget()
             self.settings_btn.pack_forget()
         
+        # Просто скрываем панель статистики (кнопка остаётся)
         self.stats_frame.pack_forget()
 
     def analyze_folder(self):
