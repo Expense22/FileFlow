@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.env
+
+#Логи
+*.log
+
+#Тесты
+tests/
+test_*.py
+
+# Конфиги (личные настройки)
+config/rules.json
+config/settings.json
+
+# Сборка
+dist/
+build/
+*.spec
+portable.mode
+
+# IDE
+.vscode/
+.idea/
+…*.swp
+*.swo

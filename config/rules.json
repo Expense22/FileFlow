@@ -46,7 +46,7 @@
     {
       "id": "archives",
       "name": "Архивы",
-      "enabled": 0,
+      "enabled": 1,
       "extensions": [
         ".zip",
         ".rar",

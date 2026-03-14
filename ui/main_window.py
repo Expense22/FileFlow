@@ -11,14 +11,22 @@ class FileFlowApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("FileFlow v0.2")
-        self.geometry("650x600")
-        self.resizable(False, False)
+        # 🎨 Автоматическая тема (мимикрия под Windows)
+        ctk.set_appearance_mode("System")
+        ctk.set_default_color_theme("dark-blue")
+
+        self.title("FileFlow v0.3")
+        self.geometry("800x700")
+        self.resizable(True, True)
+        self.minsize(700, 600)
 
         self.selected_path = ""
         self.is_expert_mode = False
         self.dry_run = True
+        self.recursive_mode = True
         self.rule_states = {}
+        self.statistics = {}
+        self.system_theme = ctk.get_appearance_mode()
 
         self.create_widgets()
 
@@ -28,7 +36,7 @@ class FileFlowApp(ctk.CTk):
         # Заголовок
         self.title_label = ctk.CTkLabel(
             self, 
-            text="🗂️ FileFlow v0.2", 
+            text="🗂️ FileFlow v0.3", 
             font=ctk.CTkFont(size=24, weight="bold")
         )
         self.title_label.pack(pady=15)
@@ -78,8 +86,48 @@ class FileFlowApp(ctk.CTk):
         )
         self.expert_switch.pack(pady=10)
 
+        # Сортировка в подпапках
+        self.subfolders_switch = ctk.CTkSwitch(
+            self,
+            text="📂 Сортировать в подпапках (рекурсивно)",
+            command=self.toggle_subfolders,
+            onvalue=True,
+            offvalue=False
+        )
+        self.subfolders_switch.select()
+        self.subfolders_switch.pack(pady=10)
+
+        # Панель статистики (скрыта по умолчанию)
+        self.stats_frame = ctk.CTkFrame(self)
+        
+        self.stats_label = ctk.CTkLabel(
+            self.stats_frame,
+            text="📊 Статистика файлов:",
+            font=ctk.CTkFont(size=14, weight="bold")
+        )
+        self.stats_label.pack(pady=5, padx=10, anchor="w")
+        
+        self.stats_text = ctk.CTkTextbox(
+            self.stats_frame, 
+            width=600, 
+            height=100,
+            font=ctk.CTkFont(size=11)
+        )
+        self.stats_text.pack(pady=5, padx=10, fill="both", expand=True)
+        self.stats_text.insert("0.0", "Выберите папку и нажмите «Анализ»\n")
+        self.stats_text.configure(state="disabled")
+
+        # Кнопка анализа (создаётся ОДИН раз здесь)
+        self.analyze_btn = ctk.CTkButton(
+            self.stats_frame,
+            text="🔍 Анализировать папку",
+            command=self.analyze_folder,
+            height=35
+        )
+        self.analyze_btn.pack(pady=10, padx=10, fill="x")
+
         # Прогресс-бар (скрыт по умолчанию)
-        self.progress_bar = ctk.CTkProgressBar(self, width=550)
+        self.progress_bar = ctk.CTkProgressBar(self, width=600)
         self.progress_bar.set(0)
         
         self.progress_label = ctk.CTkLabel(self, text="")
@@ -94,9 +142,9 @@ class FileFlowApp(ctk.CTk):
         )
         self.start_btn.pack(pady=20, padx=20, fill="x")
 
-        # Лог (текстовое поле)
-        self.log_text = ctk.CTkTextbox(self, width=550, height=150)
-        self.log_text.pack(pady=10, padx=20)
+        # Лог (текстовое поле, растягивается)
+        self.log_text = ctk.CTkTextbox(self, width=600, height=150)
+        self.log_text.pack(pady=10, padx=20, fill="both", expand=True)
         self.log_text.insert("0.0", "Готов к работе...\n")
 
     def browse_folder(self):
@@ -114,6 +162,14 @@ class FileFlowApp(ctk.CTk):
             self.log("📋 Режим: Dry Run (тестовый)")
         else:
             self.log("⚠️ Режим: Live (файлы будут перемещены!)")
+
+    def toggle_subfolders(self):
+        """Переключает режим сортировки подпапок"""
+        self.recursive_mode = self.subfolders_switch.get()
+        if self.recursive_mode:
+            self.log("📂 Режим: Сортировка с подпапками")
+        else:
+            self.log("📁 Режим: Только текущая папка")
 
     def toggle_expert(self):
         """Включает экспертный режим"""
@@ -143,12 +199,87 @@ class FileFlowApp(ctk.CTk):
         
         self.expert_btn.pack(pady=5, padx=20, fill="x", before=self.start_btn)
         self.settings_btn.pack(pady=5, padx=20, fill="x", before=self.start_btn)
+        
+        # Показываем статистику в экспертном режиме
+        self.stats_frame.pack(pady=10, padx=20, fill="x")
 
     def hide_expert_widgets(self):
         """Скрывает виджеты экспертного режима"""
         if hasattr(self, 'expert_btn'):
             self.expert_btn.pack_forget()
             self.settings_btn.pack_forget()
+        
+        self.stats_frame.pack_forget()
+
+    def analyze_folder(self):
+        """Анализирует папку и показывает статистику"""
+        if not self.selected_path:
+            self.log("❌ Ошибка: Выберите папку!")
+            return
+
+        self.log("🔍 Анализ папки...")
+        self.stats_text.configure(state="normal")
+        self.stats_text.delete("0.0", "end")
+        self.stats_text.insert("0.0", "Анализ...\n")
+        self.stats_text.configure(state="disabled")
+
+        try:
+            base_dir = Path(__file__).parent.parent
+            config_path = base_dir / 'config' / 'rules.json'
+            
+            with open(config_path, 'r', encoding='utf-8') as f:
+                rules_data = json.load(f)
+
+            stats = {rule['id']: {'count': 0, 'size': 0, 'name': rule['name']} 
+                     for rule in rules_data['rules']}
+            stats['other'] = {'count': 0, 'size': 0, 'name': 'Другое'}
+
+            total_files = 0
+            for root, dirs, files in os.walk(self.selected_path):
+                for file in files:
+                    filepath = os.path.join(root, file)
+                    try:
+                        size = os.path.getsize(filepath)
+                        ext = os.path.splitext(file)[1].lower()
+                        
+                        found = False
+                        for rule in rules_data['rules']:
+                            if ext in rule['extensions']:
+                                stats[rule['id']]['count'] += 1
+                                stats[rule['id']]['size'] += size
+                                found = True
+                                break
+                        
+                        if not found:
+                            stats['other']['count'] += 1
+                            stats['other']['size'] += size
+                        
+                        total_files += 1
+                    except:
+                        pass
+
+            def format_size(size_bytes):
+                for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+                    if size_bytes < 1024.0:
+                        return f"{size_bytes:.1f} {unit}"
+                    size_bytes /= 1024.0
+                return f"{size_bytes:.1f} PB"
+
+            output = f"Всего файлов: {total_files}\n\n"
+            for rule_id, data in stats.items():
+                if data['count'] > 0:
+                    output += f"{data['name']}: {data['count']} файлов ({format_size(data['size'])})\n"
+
+            self.stats_text.configure(state="normal")
+            self.stats_text.delete("0.0", "end")
+            self.stats_text.insert("0.0", output)
+            self.stats_text.configure(state="disabled")
+            
+            self.log(f"✅ Анализ завершён: {total_files} файлов")
+
+        except Exception as e:
+            self.log(f"❌ Ошибка анализа: {e}")
+            logger.error(f"Ошибка анализа: {e}")
 
     def edit_rules(self):
         """Открывает редактор правил с галочками"""
@@ -158,7 +289,6 @@ class FileFlowApp(ctk.CTk):
             rules_window.geometry("750x650")
             rules_window.resizable(False, False)
 
-            # Заголовок
             title = ctk.CTkLabel(
                 rules_window, 
                 text="📋 Правила сортировки", 
@@ -166,7 +296,6 @@ class FileFlowApp(ctk.CTk):
             )
             title.pack(pady=10)
 
-            # Подсказка для экспертного режима
             if self.is_expert_mode:
                 hint = ctk.CTkLabel(
                     rules_window,
@@ -176,14 +305,12 @@ class FileFlowApp(ctk.CTk):
                 )
                 hint.pack(pady=5)
 
-            # Загрузка правил
             base_dir = Path(__file__).parent.parent
             rules_path = base_dir / 'config' / 'rules.json'
             
             with open(rules_path, 'r', encoding='utf-8') as f:
                 rules_data = json.load(f)
 
-            # Скроллируемый фрейм для правил
             scroll_frame = ctk.CTkScrollableFrame(rules_window, width=700, height=450)
             scroll_frame.pack(pady=10, padx=20, fill="both", expand=True)
 
@@ -192,11 +319,9 @@ class FileFlowApp(ctk.CTk):
             self.rule_no_sort = {}
 
             for i, rule in enumerate(rules_data['rules']):
-                # Фрейм для одного правила
                 frame = ctk.CTkFrame(scroll_frame)
                 frame.pack(pady=5, padx=10, fill="x")
 
-                # Строка 1: Название + расширения
                 top_frame = ctk.CTkFrame(frame, fg_color="transparent")
                 top_frame.pack(side="top", fill="x", padx=5, pady=5)
 
@@ -213,7 +338,6 @@ class FileFlowApp(ctk.CTk):
 
                 self.rule_checkboxes[rule['id']] = cb
 
-                # Расширения
                 ext_text = ', '.join(rule['extensions'][:4])
                 if len(rule['extensions']) > 4:
                     ext_text += '...'
@@ -226,11 +350,9 @@ class FileFlowApp(ctk.CTk):
                 )
                 ext_label.pack(side="left", padx=10)
 
-                # Строка 2: Папка назначения + кнопки
                 bottom_frame = ctk.CTkFrame(frame, fg_color="transparent")
                 bottom_frame.pack(side="bottom", fill="x", padx=5, pady=5)
 
-                # Галочка "Не сортировать" (только эксперт)
                 if self.is_expert_mode:
                     no_sort_cb = ctk.CTkCheckBox(
                         bottom_frame,
@@ -243,7 +365,6 @@ class FileFlowApp(ctk.CTk):
                     no_sort_cb.pack(side="left", padx=5)
                     self.rule_no_sort[rule['id']] = no_sort_cb
 
-                # Поле ввода папки
                 dest_entry = ctk.CTkEntry(
                     bottom_frame,
                     width=250,
@@ -252,14 +373,12 @@ class FileFlowApp(ctk.CTk):
                 )
                 dest_entry.insert(0, rule.get('destination', ''))
                 
-                # Отключаем если "Не сортировать"
                 if self.is_expert_mode and 'no_sort_cb' in locals() and no_sort_cb.get():
                     dest_entry.configure(state="disabled", fg_color="gray")
                 
                 dest_entry.pack(side="left", padx=5)
                 self.rule_destinations[rule['id']] = dest_entry
 
-                # Кнопка "Обзор" (только эксперт)
                 if self.is_expert_mode:
                     def make_change_btn(entry):
                         def change_folder():
@@ -278,7 +397,6 @@ class FileFlowApp(ctk.CTk):
                     )
                     browse_btn.pack(side="left", padx=5)
 
-                # Связь галочки с полем
                 if self.is_expert_mode and 'no_sort_cb' in locals():
                     def toggle_entry(cb, entry):
                         def _toggle():
@@ -290,7 +408,6 @@ class FileFlowApp(ctk.CTk):
                     
                     no_sort_cb.configure(command=toggle_entry(no_sort_cb, dest_entry))
 
-            # Кнопки сохранения и отмены
             btn_frame = ctk.CTkFrame(rules_window, fg_color="transparent")
             btn_frame.pack(pady=15, padx=20, fill="x")
 
@@ -379,7 +496,6 @@ class FileFlowApp(ctk.CTk):
             self.log("❌ Ошибка: Выберите папку!")
             return
 
-        # Показываем прогресс-бар
         self.progress_bar.pack(pady=10, padx=20, fill="x")
         self.progress_label.pack(pady=5)
         self.progress_bar.set(0)
@@ -388,6 +504,7 @@ class FileFlowApp(ctk.CTk):
         self.log(f"\n=== Запуск сортировки ===")
         self.log(f"Путь: {self.selected_path}")
         self.log(f"Режим: {'Dry Run (Тест)' if self.dry_run else 'LIVE (Работа)'}")
+        self.log(f"Подпапки: {'✅ Да' if self.recursive_mode else '❌ Нет'}")
         self.log("-" * 30)
 
         try:
@@ -396,7 +513,7 @@ class FileFlowApp(ctk.CTk):
             settings_path = base_dir / 'config' / 'settings.json'
 
             engine = FileFlowEngine(config_path, settings_path)
-            result = engine.run(self.selected_path, dry_run=self.dry_run, gui=self)
+            result = engine.run(self.selected_path, dry_run=self.dry_run, gui=self, recursive=self.recursive_mode)
 
             self.log("-" * 30)
             if result:
@@ -407,7 +524,6 @@ class FileFlowApp(ctk.CTk):
             self.log(f"❌ Критическая ошибка: {str(e)}")
             logger.error(f"Ошибка в GUI: {e}")
         finally:
-            # Скрываем прогресс-бар после завершения
             self.progress_bar.pack_forget()
             self.progress_label.pack_forget()
 

@@ -1,3 +1,4 @@
+def run_console():
 import os
 import json
 from pathlib import Path
@@ -106,3 +107,8 @@ if __name__ == "__main__":
     choice = input("\nЗапустить движок сортировки? (да/нет): ").strip().lower()
     if choice == 'да':
         test_engine()
+
+    pass
+
+if __name__ == "__main__":
+    run_console()
