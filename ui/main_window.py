@@ -4,6 +4,7 @@ from pathlib import Path
 from core.engine import FileFlowEngine
 from core.logger import setup_logger
 import json
+import tkinter.messagebox as messagebox
 
 logger = setup_logger()
 
@@ -141,6 +142,17 @@ class FileFlowApp(ctk.CTk):
             font=ctk.CTkFont(size=16, weight="bold")
         )
         self.start_btn.pack(pady=20, padx=20, fill="x")
+
+        # ✅ Кнопка отмены (скрыта по умолчанию)
+        self.undo_btn = ctk.CTkButton(
+            self, 
+            text="↩️ Отменить последнюю сортировку", 
+            command=self.undo_sorting,
+            height=40,
+            fg_color="orange",
+            hover_color="darkorange"
+        )
+        # Не pack() — пока скрыта
 
         # Лог (текстовое поле, растягивается)
         self.log_text = ctk.CTkTextbox(self, width=600, height=150)
@@ -496,6 +508,10 @@ class FileFlowApp(ctk.CTk):
         if not self.selected_path:
             self.log("❌ Ошибка: Выберите папку!")
             return
+        
+        # ✅ Скрываем кнопку отмены перед новой сортировкой
+        if hasattr(self, 'undo_btn'):
+            self.undo_btn.pack_forget()
 
         self.progress_bar.pack(pady=10, padx=20, fill="x")
         self.progress_label.pack(pady=5)
@@ -519,6 +535,8 @@ class FileFlowApp(ctk.CTk):
             self.log("-" * 30)
             if result:
                 self.log("✅ Сортировка завершена успешно!")
+                # ✅ Показываем кнопку отмены
+                self.undo_btn.pack(pady=10, padx=20, fill="x")
             else:
                 self.log("❌ Сортировка прервана (ошибка безопасности)")
         except Exception as e:
@@ -533,6 +551,44 @@ class FileFlowApp(ctk.CTk):
         self.log_text.insert("end", f"{message}\n")
         self.log_text.see("end")
 
+    def undo_sorting(self):
+        """Отменяет последнюю сортировку"""
+        if not self.selected_path:
+            self.log("❌ Ошибка: Выберите папку!")
+            return
+        
+        # Подтверждение
+        confirm = messagebox.askyesno(  # ✅ messagebox вместо ctk.messagebox
+            "Подтверждение",
+            "⚠️ Вы уверены, что хотите отменить последнюю сортировку?\n\n"
+            "Все перемещённые файлы будут возвращены на исходные места."
+        )
+        
+        if not confirm:
+            return
+        
+        self.log("\n=== Отмена сортировки ===")
+        
+        try:
+            base_dir = Path(__file__).parent.parent
+            config_path = base_dir / 'config' / 'rules.json'
+            settings_path = base_dir / 'config' / 'settings.json'
+            
+            engine = FileFlowEngine(config_path, settings_path)
+            success, message = engine.undo_last_sort(self.selected_path)
+            
+            if success:
+                self.log(f"✅ {message}")
+                self.log("✅ Отмена завершена успешно!")
+                # Скрываем кнопку после успешной отмены
+                self.undo_btn.pack_forget()
+            else:
+                self.log(f"❌ {message}")
+                
+        except Exception as e:
+            self.log(f"❌ Критическая ошибка: {str(e)}")
+            logger.error(f"Ошибка отмены: {e}")
+            
 def run_app():
     """Запуск приложения"""
     app = FileFlowApp()
