@@ -23,7 +23,7 @@ PyInstaller.__main__.run([
     '--name=FileFlow',        # Имя программы
     '--windowed',             # Без консоли
     '--add-data=config;config',  # Включаем папку config
-    '--icon=NONE',            # Без иконки (пока)
+    '--icon=icon.ico',  # ✅ ICO для .exe
     '--clean',                # Очистка перед сборкой
     '--noconfirm',            # Не спрашивать подтверждение
 ])
