@@ -3,11 +3,52 @@ import shutil
 import json
 import logging
 import stat
+from datetime import datetime
 from core.safety import validate_root_path
 from core.exclusions import ProjectGuard
 from core.cleanup import CleanupModule
 
 logger = logging.getLogger("FileFlow")
+
+
+def is_program_folder(folder_path, files):
+    """
+    Проверяет, является ли папка распакованной программой.
+    
+    Признаки:
+    - Есть .exe файлы
+    - Есть .dll файлы
+    - Есть конфиги программы (.cfg, .ini)
+    - Комбинация файлов указывает на программу
+    """
+    exe_count = 0
+    dll_count = 0
+    has_config = False
+    has_readme = False
+    
+    for file in files:
+        ext = os.path.splitext(file)[1].lower()
+        name = file.lower()
+        
+        if ext == '.exe':
+            exe_count += 1
+        elif ext == '.dll':
+            dll_count += 1
+        elif ext in ['.cfg', '.ini', '.conf']:
+            has_config = True
+        elif name in ['readme.txt', 'readme.md', 'license.txt']:
+            has_readme = True
+    
+    # Программа если есть хотя бы один .exe
+    if exe_count > 0:
+        return True, f"Найдено EXE файлов: {exe_count}"
+    
+    # Или DLL + конфиг
+    if dll_count > 0 and has_config:
+        return True, f"Найдено DLL: {dll_count}, есть конфиг"
+    
+    return False, None
+
 
 class FileFlowEngine:
     def __init__(self, config_path, settings_path):
@@ -20,6 +61,7 @@ class FileFlowEngine:
         
         self.guard = ProjectGuard(self.settings['project_guard']['signatures'])
         self.cleanup = None
+        self.move_history = []
 
     def _log(self, message, gui=None):
         """Универсальная функция логов"""
@@ -75,6 +117,21 @@ class FileFlowEngine:
         # 4. Сбор всех файлов
         all_files = []
         for root, dirs, files in os.walk(root_path):
+            # ✅ Пропускаем папки с маркером игнорирования
+            if '.fileflow_ignore' in files:
+                self._log(f"⏭️ Пропущено (маркер): {root}", gui)
+                dirs.clear()
+                continue
+            
+            # ✅ Проверяем, не является ли папка программой
+            is_program, reason = is_program_folder(root, files)
+            if is_program:
+                folder_name = os.path.basename(root)
+                self._log(f"🛡️ Защищено (программа): {folder_name} ({reason})", gui)
+                self.guard.protected_roots.add(root.lower())
+                dirs.clear()
+                continue
+            
             # Если рекурсия выключена — не идём глубже
             if not recursive:
                 dirs.clear()
@@ -161,6 +218,14 @@ class FileFlowEngine:
                     try:
                         shutil.move(filepath, new_path)
                         moved_count += 1
+                        
+                        # Сохраняем в историю
+                        self.move_history.append({
+                            'original': filepath,
+                            'new': new_path,
+                            'timestamp': datetime.now().isoformat()
+                        })
+                        
                         logger.info(f"Перемещено: {filepath} -> {new_path}")
                     except PermissionError as e:
                         self._log(f"❌ Нет прав: {os.path.basename(filepath)}", gui)
@@ -181,6 +246,10 @@ class FileFlowEngine:
             processed += 1
             self._update_progress(processed, total_files, gui)
 
+        # Сохраняем историю
+        if not dry_run and self.move_history:
+            self.save_history(root_path)
+
         # Итоговая статистика
         self._log(f"\n=== Готово ===", gui)
         self._log(f"✅ Обработано файлов: {moved_count}", gui)
@@ -193,3 +262,76 @@ class FileFlowEngine:
         self._update_progress(total_files, total_files, gui)
         
         return True
+
+    def save_history(self, root_path):
+        """Сохраняет историю перемещений"""
+        if not self.move_history:
+            return
+        
+        history_file = os.path.join(root_path, '.fileflow_history.json')
+        
+        # Загружаем предыдущую историю (если есть)
+        previous_history = []
+        if os.path.exists(history_file):
+            try:
+                with open(history_file, 'r', encoding='utf-8') as f:
+                    previous_history = json.load(f)
+            except:
+                pass
+        
+        # Добавляем новую
+        previous_history.extend(self.move_history)
+        
+        # Сохраняем
+        with open(history_file, 'w', encoding='utf-8') as f:
+            json.dump(previous_history, f, indent=2, ensure_ascii=False)
+        
+        logger.info(f"История сохранена: {len(self.move_history)} записей")
+
+    def undo_last_sort(self, root_path):
+        """Отменяет последнюю сортировку"""
+        history_file = os.path.join(root_path, '.fileflow_history.json')
+        
+        if not os.path.exists(history_file):
+            logger.warning("История не найдена — нечего отменять")
+            return False, "История не найдена"
+        
+        try:
+            with open(history_file, 'r', encoding='utf-8') as f:
+                history = json.load(f)
+            
+            if not history:
+                return False, "История пуста"
+            
+            # Отменяем в обратном порядке
+            undone = 0
+            errors = 0
+            
+            for entry in reversed(history):
+                original = entry['original']
+                new_path = entry['new']
+                
+                if os.path.exists(new_path):
+                    try:
+                        # Создаём исходную папку если нет
+                        os.makedirs(os.path.dirname(original), exist_ok=True)
+                        
+                        # Возвращаем файл
+                        shutil.move(new_path, original)
+                        undone += 1
+                        logger.info(f"Возвращено: {new_path} -> {original}")
+                    except Exception as e:
+                        errors += 1
+                        logger.error(f"Ошибка отмены {new_path}: {e}")
+                else:
+                    logger.warning(f"Файл не найден: {new_path}")
+            
+            # Очищаем историю после отмены
+            os.remove(history_file)
+            
+            success = undone > 0 and errors == 0
+            return success, f"Отменено: {undone}, Ошибок: {errors}"
+            
+        except Exception as e:
+            logger.error(f"Ошибка отмены: {e}")
+            return False, str(e)

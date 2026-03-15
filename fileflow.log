@@ -177,3 +177,43 @@
 2026-03-14 23:51:37,604 - INFO - ⚠️ Пропущено: 0
 2026-03-14 23:51:37,605 - INFO - ❌ Ошибок: 0
 2026-03-14 23:51:37,606 - INFO - ⚠️ Режим Dry Run — файлы не были перемещены!
+2026-03-15 16:04:37,736 - INFO - === Запуск FileFlow для: D:/Dev/FileFlow/tests ===
+2026-03-15 16:04:37,738 - INFO - ✅ Путь безопасен: D:/Dev/FileFlow/tests
+2026-03-15 16:04:37,756 - INFO - 🛡️ Защищено проектов: 1
+2026-03-15 16:04:37,757 - INFO - 🛡️ Защищено (программа): memtest86-usb (Найдено EXE файлов: 1)
+2026-03-15 16:04:37,766 - INFO - 📁 Всего файлов на обработку: 7
+2026-03-15 16:04:37,767 - INFO - 📂 Режим: С подпапками (рекурсивно)
+2026-03-15 16:04:37,778 - INFO - 🗑️ Найдено мусора: 0
+2026-03-15 16:04:37,780 - INFO -    [DRY] Документы: Document_dup_1.docx
+2026-03-15 16:04:37,783 - INFO -    [DRY] Документы: Document_dup_dup.docx
+2026-03-15 16:04:37,785 - INFO -    [DRY] Документы: test.txt
+2026-03-15 16:04:37,787 - INFO -    [DRY] Документы: Document_dup_dup.docx
+2026-03-15 16:04:37,789 - INFO -    [DRY] Документы: ~$cument_dup_1.docx
+2026-03-15 16:04:37,791 - INFO -    [DRY] Изображения: old_foto_dup_dup.jpg
+2026-03-15 16:04:37,793 - INFO -    [DRY] Изображения: Photo_dup_dup.jpg
+2026-03-15 16:04:37,795 - INFO - 
+=== Готово ===
+2026-03-15 16:04:37,796 - INFO - ✅ Обработано файлов: 7
+2026-03-15 16:04:37,796 - INFO - ⚠️ Пропущено: 0
+2026-03-15 16:04:37,797 - INFO - ❌ Ошибок: 0
+2026-03-15 16:04:37,798 - INFO - ⚠️ Режим Dry Run — файлы не были перемещены!
+2026-03-15 16:05:22,942 - INFO - === Запуск FileFlow для: D:/Dev/FileFlow/tests ===
+2026-03-15 16:05:22,942 - INFO - ✅ Путь безопасен: D:/Dev/FileFlow/tests
+2026-03-15 16:05:22,944 - INFO - 🛡️ Защищено проектов: 1
+2026-03-15 16:05:22,945 - INFO - 🛡️ Защищено (программа): memtest86-usb (Найдено EXE файлов: 1)
+2026-03-15 16:05:22,946 - INFO - 📁 Всего файлов на обработку: 7
+2026-03-15 16:05:22,947 - INFO - 📂 Режим: С подпапками (рекурсивно)
+2026-03-15 16:05:22,948 - INFO - 🗑️ Найдено мусора: 0
+2026-03-15 16:05:22,949 - INFO - Перемещено: D:/Dev/FileFlow/tests\Document_dup_1.docx -> D:/Dev/FileFlow/tests\Documents\Document_dup_1.docx
+2026-03-15 16:05:22,951 - INFO - Перемещено: D:/Dev/FileFlow/tests\Document_dup_dup.docx -> D:/Dev/FileFlow/tests\Documents\Document_dup_dup_dup.docx
+2026-03-15 16:05:22,953 - INFO - Перемещено: D:/Dev/FileFlow/tests\test.txt -> D:/Dev/FileFlow/tests\Documents\test.txt
+2026-03-15 16:05:23,131 - INFO - Перемещено: D:/Dev/FileFlow/tests\Documents\Document_dup_dup.docx -> D:/Dev/FileFlow/tests\Documents\Document_dup_dup_dup.docx
+2026-03-15 16:05:23,133 - INFO - Перемещено: D:/Dev/FileFlow/tests\Documents\~$cument_dup_1.docx -> D:/Dev/FileFlow/tests\Documents\~$cument_dup_1_dup.docx
+2026-03-15 16:05:23,134 - INFO - Перемещено: D:/Dev/FileFlow/tests\Media\Images\old_foto_dup_dup.jpg -> D:/Dev/FileFlow/tests\Media/Images\old_foto_dup_dup_dup.jpg
+2026-03-15 16:05:23,136 - INFO - Перемещено: D:/Dev/FileFlow/tests\Media\Images\Photo_dup_dup.jpg -> D:/Dev/FileFlow/tests\Media/Images\Photo_dup_dup_dup.jpg
+2026-03-15 16:05:23,137 - INFO - История сохранена: 7 записей
+2026-03-15 16:05:23,138 - INFO - 
+=== Готово ===
+2026-03-15 16:05:23,139 - INFO - ✅ Обработано файлов: 7
+2026-03-15 16:05:23,140 - INFO - ⚠️ Пропущено: 0
+2026-03-15 16:05:23,141 - INFO - ❌ Ошибок: 0
