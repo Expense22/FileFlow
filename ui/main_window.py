@@ -1,5 +1,6 @@
 import customtkinter as ctk
 import os
+import sys
 from pathlib import Path
 from core.engine import FileFlowEngine
 from core.logger import setup_logger
@@ -62,14 +63,22 @@ class FileFlowApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        # 🎨 Автоматическая тема (мимикрия под Windows)
+        # 🎨 Автоматическая тема
         ctk.set_appearance_mode("System")
         ctk.set_default_color_theme("dark-blue")
 
-        self.title("FileFlow v0.3")
+        self.title("FileFlow v0.5")  # ✅ Обнови версию
         
-        # Путь к логотипу
-        self.logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logo.png')
+        # ✅ Путь к логотипу (работает и в .exe, и в Python)
+        if getattr(sys, 'frozen', False):
+            # Запущен из .exe
+            self.logo_path = os.path.join(sys._MEIPASS, 'logo.png')
+        else:
+            # Запущен из Python
+            self.logo_path = os.path.join(
+                os.path.dirname(os.path.dirname(__file__)), 
+                'logo.png'
+            )
         
         self.geometry("800x750")
         self.resizable(True, True)
@@ -180,11 +189,11 @@ class FileFlowApp(ctk.CTk):
         self.subfolders_switch.select()
         self.subfolders_switch.pack(pady=10)
 
-        # ✅ КОНТЕЙНЕР ДЛЯ 3 КНОПОК (30% / 60% / 10%)
+        # ✅ КОНТЕЙНЕР ДЛЯ КНОПОК (4 кнопки теперь)
         self.buttons_container = ctk.CTkFrame(self, fg_color="transparent")
         self.buttons_container.pack(pady=20, padx=20, fill="x")
 
-        # ✅ Кнопка анализа (30% ширины) — БЕЗ ИКОНКИ
+        # ✅ Кнопка анализа (25% ширины)
         self.analyze_btn = ctk.CTkButton(
             self.buttons_container,
             text="Анализ",
@@ -194,9 +203,21 @@ class FileFlowApp(ctk.CTk):
             fg_color=COLORS['analyze_btn'],
             hover_color=COLORS['analyze_btn_hover']
         )
-        self.analyze_btn.pack(side="left", padx=(0, 5), fill="x", expand=True)
+        self.analyze_btn.pack(side="left", padx=(0, 3), fill="x", expand=True)
 
-        # ✅ Кнопка запуска сортировки (60% ширины) — БЕЗ ИКОНКИ
+        # ✅ Кнопка поиска дубликатов (25% ширины) — НОВАЯ!
+        self.duplicates_btn = ctk.CTkButton(
+            self.buttons_container,
+            text="Дубликаты",
+            command=self.find_duplicates,
+            height=40,
+            corner_radius=8,
+            fg_color="#DC143C",  # Красный
+            hover_color="#FF1493"
+        )
+        self.duplicates_btn.pack(side="left", padx=(3, 3), fill="x", expand=True)
+
+        # ✅ Кнопка запуска сортировки (25% ширины)
         self.start_btn = ctk.CTkButton(
             self.buttons_container,
             text="Сортировка",
@@ -206,9 +227,9 @@ class FileFlowApp(ctk.CTk):
             fg_color=COLORS['sort_btn'],
             hover_color=COLORS['sort_btn_hover']
         )
-        self.start_btn.pack(side="left", padx=(5, 5), fill="x", expand=True)
+        self.start_btn.pack(side="left", padx=(3, 3), fill="x", expand=True)
 
-        # ✅ Кнопка логи (10% ширины) — БЕЗ ИКОНКИ
+        # ✅ Кнопка логи (25% ширины)
         self.logs_btn = ctk.CTkButton(
             self.buttons_container,
             text="Логи",
@@ -219,7 +240,7 @@ class FileFlowApp(ctk.CTk):
             hover_color=COLORS['logs_btn_hover'],
             width=80
         )
-        self.logs_btn.pack(side="left", padx=(5, 0), fill="x", expand=True)
+        self.logs_btn.pack(side="left", padx=(3, 0), fill="x", expand=True)
 
         # Прогресс-бар (скрыт по умолчанию)
         self.progress_bar = ctk.CTkProgressBar(self, width=600, corner_radius=4)
@@ -329,7 +350,7 @@ class FileFlowApp(ctk.CTk):
         self.expert_btn.pack(pady=5, padx=20, fill="x", before=self.buttons_container)
         self.settings_btn.pack(pady=5, padx=20, fill="x", before=self.buttons_container)
         
-        # ✅ Показываем панель статистики с масштабированием
+        # ✅ Показываем панель статистики
         self.stats_frame.pack(pady=10, padx=20, fill="both", expand=True, after=self.buttons_container)
 
     def hide_expert_widgets(self):
@@ -852,6 +873,252 @@ class FileFlowApp(ctk.CTk):
         """Добавляет сообщение в лог-окно"""
         self.log_text.insert("end", f"{message}\n")
         self.log_text.see("end")
+
+        
+    def find_duplicates(self):
+        """Ищет и показывает дубликаты файлов"""
+        if not self.selected_path:
+            self.log("Ошибка: Выберите папку!")
+            return
+
+        self.log("Поиск дубликатов...")
+        
+        # Проверяем количество файлов
+        file_count = 0
+        try:
+            for root, dirs, files in os.walk(self.selected_path):
+                dirs[:] = [d for d in dirs if d not in ['venv', '__pycache__']]
+                file_count += len(files)
+        except:
+            pass
+        
+        if file_count > 10000:
+            confirm = messagebox.askyesno(
+                "Много файлов",
+                f"Найдено {file_count} файлов.\n\nПоиск может занять несколько минут.\nПродолжить?"
+            )
+            if not confirm:
+                return
+        
+        self.log(f"Поиск дубликатов среди {file_count} файлов...")
+        
+        # ✅ Запускаем поиск БЕЗ окна прогресса (просто в потоке)
+        import threading
+        
+        result = {'duplicates': None, 'error': None}
+        
+        def search_thread():
+            try:
+                from core.duplicates import DuplicateFinder
+                finder = DuplicateFinder()
+                duplicates = finder.find_duplicates(
+                    self.selected_path, 
+                    recursive=True,
+                    min_size=10240  # 10KB минимум
+                )
+                result['duplicates'] = (finder, duplicates)
+            except Exception as e:
+                result['error'] = str(e)
+                import traceback
+                traceback.print_exc()
+        
+        # Запускаем в отдельном потоке
+        thread = threading.Thread(target=search_thread, daemon=True)
+        thread.start()
+        
+        # Показываем простое сообщение пока ждём
+        self.log("Сканирование... Пожалуйста, подождите.")
+        
+        # Ждём завершения
+        thread.join()
+        
+        # Проверяем результат
+        if result['error']:
+            self.log(f"Ошибка поиска: {result['error']}")
+            messagebox.showerror("Ошибка", f"Не удалось найти дубликаты:\n{result['error']}")
+            return
+        
+        if result['duplicates']:
+            finder, duplicates = result['duplicates']
+            if duplicates:
+                dup_count = finder.get_duplicates_count()
+                wasted = finder.get_wasted_space()
+                self.log(f"Найдено дубликатов: {dup_count} файлов ({self.format_size(wasted)})")
+                # ✅ Вызываем метод правильно
+                self.show_duplicates_window(finder, duplicates)
+            else:
+                self.log("Дубликаты не найдены")
+                messagebox.showinfo("Результат", "Дубликаты не найдены!")
+
+    def show_duplicates_window(self, finder, duplicates):
+        """Показывает окно с найденными дубликатами"""
+        # ✅ Создаём окно
+        dup_window = ctk.CTkToplevel(self)
+        dup_window.title("Дубликаты файлов")
+        dup_window.geometry("900x600")
+        
+        # Заголовок
+        title = ctk.CTkLabel(
+            dup_window,
+            text="Найденные дубликаты",
+            font=ctk.CTkFont(size=18, weight="bold"),
+            text_color="#DC143C"
+        )
+        title.pack(pady=10)
+        
+        # Статистика
+        wasted_space = finder.get_wasted_space()
+        dup_count = finder.get_duplicates_count()
+        
+        stats_frame = ctk.CTkFrame(dup_window, corner_radius=8)
+        stats_frame.pack(pady=10, padx=20, fill="x")
+        
+        ctk.CTkLabel(
+            stats_frame,
+            text=f"Найдено дубликатов: {dup_count}",
+            font=ctk.CTkFont(size=12, weight="bold")
+        ).pack(pady=5)
+        
+        ctk.CTkLabel(
+            stats_frame,
+            text=f"Можно освободить: {self.format_size(wasted_space)}",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color="#32CD32"
+        ).pack(pady=5)
+        
+        # Прокручиваемый список дубликатов
+        scroll_frame = ctk.CTkScrollableFrame(dup_window, corner_radius=8)
+        scroll_frame.pack(pady=10, padx=20, fill="both", expand=True)
+        
+        # Чекбоксы для выбора
+        checkboxes = {}
+        
+        # Группируем дубликаты
+        group_num = 0
+        for file_hash, files in duplicates.items():
+            group_num += 1
+            
+            # Заголовок группы
+            group_frame = ctk.CTkFrame(scroll_frame, fg_color="#2b2b2b", corner_radius=8)
+            group_frame.pack(pady=5, padx=5, fill="x")
+            
+            ctk.CTkLabel(
+                group_frame,
+                text=f"Группа {group_num} ({len(files)} файлов)",
+                font=ctk.CTkFont(size=11, weight="bold"),
+                text_color="#FF8C00"
+            ).pack(pady=5, padx=10, anchor="w")
+            
+            # Список файлов в группе
+            for i, filepath in enumerate(files):
+                file_frame = ctk.CTkFrame(group_frame, fg_color="transparent")
+                file_frame.pack(pady=2, padx=10, fill="x")
+                
+                # Чекбокс (не отмечать первый файл - он будет сохранён)
+                cb = ctk.CTkCheckBox(
+                    file_frame,
+                    text="",
+                    width=20,
+                    onvalue=filepath,
+                    offvalue=""
+                )
+                if i > 0:  # Не отмечать первый файл
+                    cb.select()
+                cb.pack(side="left", padx=5)
+                checkboxes[filepath] = cb
+                
+                # Путь к файлу
+                path_label = ctk.CTkLabel(
+                    file_frame,
+                    text=filepath,
+                    font=ctk.CTkFont(size=10),
+                    anchor="w"
+                )
+                path_label.pack(side="left", padx=5, fill="x", expand=True)
+                
+                # Размер файла
+                try:
+                    size = os.path.getsize(filepath)
+                    size_label = ctk.CTkLabel(
+                        file_frame,
+                        text=self.format_size(size),
+                        font=ctk.CTkFont(size=9),
+                        text_color="#888888"
+                    )
+                    size_label.pack(side="right", padx=5)
+                except:
+                    pass
+                
+                # Кнопка "Открыть папку"
+                def make_open_btn(path):
+                    def open_folder():
+                        os.startfile(os.path.dirname(path))
+                    return open_folder
+                
+                open_btn = ctk.CTkButton(
+                    file_frame,
+                    text="",
+                    width=30,
+                    height=25,
+                    corner_radius=4,
+                    command=make_open_btn(filepath)
+                )
+                open_btn.pack(side="right", padx=2)
+        
+        # Кнопки действий
+        btn_frame = ctk.CTkFrame(dup_window, fg_color="transparent")
+        btn_frame.pack(pady=15, padx=20, fill="x")
+        
+        def delete_selected():
+            to_delete = [cb.get() for cb in checkboxes.values() if cb.get()]
+            if to_delete:
+                confirm = messagebox.askyesno(
+                    "Подтверждение",
+                    f"Удалить {len(to_delete)} файлов?\n\nЭто действие нельзя отменить!"
+                )
+                if confirm:
+                    deleted = 0
+                    freed = 0
+                    for filepath in to_delete:
+                        try:
+                            size = os.path.getsize(filepath)
+                            os.remove(filepath)
+                            deleted += 1
+                            freed += size
+                        except Exception as e:
+                            self.log(f"Ошибка удаления {filepath}: {e}")
+                    
+                    self.log(f"Удалено {deleted} файлов, освобождено {self.format_size(freed)}")
+                    dup_window.destroy()
+        
+        ctk.CTkButton(
+            btn_frame,
+            text="Удалить выбранные",
+            command=delete_selected,
+            height=40,
+            corner_radius=8,
+            fg_color="#DC143C",
+            hover_color="#FF1493",
+            width=200
+        ).pack(side="left", padx=10)
+        
+        ctk.CTkButton(
+            btn_frame,
+            text="Закрыть",
+            command=dup_window.destroy,
+            height=40,
+            corner_radius=8,
+            fg_color="gray",
+            width=150
+        ).pack(side="right", padx=10)
+    
+    def format_size(self, size_bytes: int) -> str:
+        """Форматирует размер файла"""
+        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+            if size_bytes < 1024.0:
+                return f"{size_bytes:.1f} {unit}"
+            size_bytes /= 1024.0
+        return f"{size_bytes:.1f} PB"
 
 def run_app():
     """Запуск приложения"""

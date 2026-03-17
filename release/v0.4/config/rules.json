@@ -1,0 +1,86 @@
+{
+  "rules": [
+    {
+      "id": "images",
+      "name": "Изображения",
+      "enabled": 1,
+      "extensions": [
+        ".jpg",
+        ".png",
+        ".jpeg",
+        ".gif",
+        ".bmp",
+        ".webp",
+        ".heic"
+      ],
+      "destination": "Media/Images"
+    },
+    {
+      "id": "documents",
+      "name": "Документы",
+      "enabled": 1,
+      "extensions": [
+        ".doc",
+        ".docx",
+        ".pdf",
+        ".txt",
+        ".xls",
+        ".xlsx",
+        ".ppt",
+        ".pptx"
+      ],
+      "destination": "Documents"
+    },
+    {
+      "id": "installers",
+      "name": "Установщики",
+      "enabled": 1,
+      "extensions": [
+        ".exe",
+        ".msi",
+        ".dmg",
+        ".pkg"
+      ],
+      "destination": "Installers"
+    },
+    {
+      "id": "archives",
+      "name": "Архивы",
+      "enabled": 1,
+      "extensions": [
+        ".zip",
+        ".rar",
+        ".7z",
+        ".tar",
+        ".gz"
+      ],
+      "destination": "Archives"
+    },
+    {
+      "id": "video",
+      "name": "Видео",
+      "enabled": 1,
+      "extensions": [
+        ".mp4",
+        ".avi",
+        ".mkv",
+        ".mov",
+        ".wmv"
+      ],
+      "destination": "Media/Video"
+    },
+    {
+      "id": "audio",
+      "name": "Аудио",
+      "enabled": 1,
+      "extensions": [
+        ".mp3",
+        ".wav",
+        ".flac",
+        ".aac",
+        ".ogg"
+      ],
+      "destination": "Media/Audio"
+    }
+  ]
+}
