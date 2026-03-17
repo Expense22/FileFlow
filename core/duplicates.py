@@ -54,8 +54,7 @@ class DuplicateFinder:
         Args:
             folder_path: Путь к папке для сканирования
             recursive: Искать в подпапках (True) или только в корневой (False)
-            min_size: Минимальный размер файла в байтах (пропускать маленькие файлы)
-                     По умолчанию 10KB - пропускает системные и временные файлы
+            min_size: Минимальный размер файла в байтах (по умолчанию 10KB)
             callback: Функция обратного вызова для прогресса callback(current, total)
         
         Returns:
@@ -72,7 +71,7 @@ class DuplicateFinder:
         size_groups = defaultdict(list)
         all_files = []
         
-        # Папки для пропуска (системные, кеш, зависимости)
+        # Папки для пропуска
         skip_folders = {
             'venv', '__pycache__', '.git', '.vscode', 
             'node_modules', '.idea', 'dist', 'build'
@@ -92,7 +91,7 @@ class DuplicateFinder:
                                 size_groups[size].append(filepath)
                                 all_files.append(filepath)
                         except (OSError, IOError):
-                            pass  # Пропускаем файлы к которым нет доступа
+                            pass
             else:
                 for file in os.listdir(folder_path):
                     filepath = os.path.join(folder_path, file)
@@ -126,25 +125,25 @@ class DuplicateFinder:
                     if file_hash:
                         hash_groups[file_hash].append(filepath)
                 except Exception:
-                    pass  # Пропускаем проблемные файлы
+                    pass
                 
                 self.files_processed += 1
                 
-                # Обновляем прогресс
+                # ✅ Обновляем прогресс
                 if callback and self.total_files > 0:
                     try:
                         callback(self.files_processed, self.total_files)
                     except:
-                        pass  # Игнорируем ошибки обновления UI
+                        pass
         
         # ═══════════════════════════════════════════════════
         # ШАГ 3: Оставляем только группы с дубликатами (2+ файла)
         # ═══════════════════════════════════════════════════
         for file_hash, files in hash_groups.items():
             if len(files) > 1:
-                self.duplicates[file_hash] = sorted(files)  # Сортируем для удобства
+                self.duplicates[file_hash] = sorted(files)
                 
-                # Считаем wasted space (все копии кроме одной)
+                # Считаем wasted space
                 try:
                     file_size = os.path.getsize(files[0])
                     self.total_space_waste += file_size * (len(files) - 1)
@@ -154,42 +153,22 @@ class DuplicateFinder:
         return self.duplicates
     
     def get_wasted_space(self) -> int:
-        """
-        Возвращает общий размер дубликатов в байтах
-        
-        Returns:
-            Размер в байтах
-        """
+        """Возвращает общий размер дубликатов в байтах"""
         return self.total_space_waste
     
     def get_duplicates_count(self) -> int:
-        """
-        Возвращает количество дубликатов (лишних копий)
-        
-        Returns:
-            Количество файлов которые можно удалить
-        """
+        """Возвращает количество дубликатов (лишних копий)"""
         count = 0
         for files in self.duplicates.values():
-            count += len(files) - 1  # Все кроме оригинала
+            count += len(files) - 1
         return count
     
     def get_groups_count(self) -> int:
-        """
-        Возвращает количество групп дубликатов
-        
-        Returns:
-            Количество групп
-        """
+        """Возвращает количество групп дубликатов"""
         return len(self.duplicates)
     
     def get_total_files(self) -> int:
-        """
-        Возвращает общее количество обработанных файлов
-        
-        Returns:
-            Количество файлов
-        """
+        """Возвращает общее количество обработанных файлов"""
         return self.total_files
     
     def delete_duplicates(self, files_to_delete: List[str]) -> Tuple[int, int]:
@@ -216,93 +195,7 @@ class DuplicateFinder:
         
         return deleted_count, freed_space
     
-    def move_duplicates(self, files_to_move: List[str], 
-                       destination_folder: str) -> Tuple[int, int]:
-        """
-        Перемещает дубликаты в указанную папку
-        
-        Args:
-            files_to_move: Список путей к файлам для перемещения
-            destination_folder: Папка для перемещения
-        
-        Returns:
-            Кортеж (перемещено файлов, перемещено байт)
-        """
-        moved_count = 0
-        moved_space = 0
-        
-        # Создаём папку если не существует
-        os.makedirs(destination_folder, exist_ok=True)
-        
-        for filepath in files_to_move:
-            try:
-                filename = os.path.basename(filepath)
-                dest_path = os.path.join(destination_folder, filename)
-                
-                # Если файл уже существует, добавляем номер
-                if os.path.exists(dest_path):
-                    base, ext = os.path.splitext(filename)
-                    counter = 1
-                    while os.path.exists(dest_path):
-                        dest_path = os.path.join(destination_folder, f"{base}_{counter}{ext}")
-                        counter += 1
-                
-                size = os.path.getsize(filepath)
-                os.rename(filepath, dest_path)
-                moved_count += 1
-                moved_space += size
-            except Exception as e:
-                print(f"Ошибка перемещения {filepath}: {e}")
-        
-        return moved_count, moved_space
-    
-    def export_to_file(self, output_path: str) -> bool:
-        """
-        Экспортирует список дубликатов в текстовый файл
-        
-        Args:
-            output_path: Путь к выходному файлу
-        
-        Returns:
-            True если успешно, False иначе
-        """
-        try:
-            with open(output_path, 'w', encoding='utf-8') as f:
-                f.write("=" * 60 + "\n")
-                f.write("FileFlow - Отчёт о дубликатах файлов\n")
-                f.write("=" * 60 + "\n\n")
-                
-                f.write(f"Всего групп дубликатов: {self.get_groups_count()}\n")
-                f.write(f"Всего лишних файлов: {self.get_duplicates_count()}\n")
-                f.write(f"Можно освободить места: {self._format_size(self.total_space_waste)}\n\n")
-                
-                f.write("=" * 60 + "\n\n")
-                
-                group_num = 0
-                for file_hash, files in self.duplicates.items():
-                    group_num += 1
-                    f.write(f"Группа {group_num} ({len(files)} файлов)\n")
-                    f.write(f"Хеш: {file_hash}\n")
-                    f.write("-" * 40 + "\n")
-                    
-                    for filepath in files:
-                        try:
-                            size = os.path.getsize(filepath)
-                            f.write(f"  • {filepath} ({self._format_size(size)})\n")
-                        except:
-                            f.write(f"  • {filepath}\n")
-                    
-                    f.write("\n")
-                
-                f.write("=" * 60 + "\n")
-                f.write("Конец отчёта\n")
-            
-            return True
-        except Exception as e:
-            print(f"Ошибка экспорта: {e}")
-            return False
-    
-    def _format_size(self, size_bytes: int) -> str:
+    def format_size(self, size_bytes: int) -> str:
         """Форматирует размер файла для отображения"""
         for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
             if size_bytes < 1024.0:
@@ -340,15 +233,4 @@ if __name__ == "__main__":
     
     print(f"\n\n✅ Найдено групп дубликатов: {finder.get_groups_count()}")
     print(f"📁 Лишних файлов: {finder.get_duplicates_count()}")
-    print(f"💾 Можно освободить: {finder._format_size(finder.get_wasted_space())}")
-    
-    if duplicates:
-        print("\n" + "=" * 40)
-        for i, (file_hash, files) in enumerate(duplicates.items(), 1):
-            print(f"\nГруппа {i}:")
-            for filepath in files:
-                try:
-                    size = os.path.getsize(filepath)
-                    print(f"  • {filepath} ({finder._format_size(size)})")
-                except:
-                    print(f"  • {filepath}")
+    print(f"💾 Можно освободить: {finder.format_size(finder.get_wasted_space())}")
